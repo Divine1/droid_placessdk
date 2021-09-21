@@ -16,6 +16,8 @@ import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.PlaceLikelihood
 import com.google.android.libraries.places.api.model.TypeFilter
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.FetchPlaceResponse
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
@@ -64,6 +66,7 @@ class FirstFragment : Fragment() {
             override fun onPlaceSelected(place: Place) {
                 // TODO: Get info about the selected place.
                 Log.i("FirstFragment", "Place: ${place.name}, ${place.id}")
+                getPlaceByPlaceId(place.id!!)
             }
 
             override fun onError(status: Status) {
@@ -78,10 +81,9 @@ class FirstFragment : Fragment() {
 
     fun getCurrentLocation(){
 
-        Log.d(
-            "FirstFragment","in getCurrentLocation")
+        Log.d("FirstFragment","in getCurrentLocation")
         // Use fields to define the data types to return.
-        val placeFields: List<Place.Field> = listOf(Place.Field.NAME)
+        val placeFields: List<Place.Field> = listOf(Place.Field.NAME,Place.Field.ID);
 
 // Use the builder to create a FindCurrentPlaceRequest.
         val request: FindCurrentPlaceRequest = FindCurrentPlaceRequest.newInstance(placeFields)
@@ -89,7 +91,7 @@ class FirstFragment : Fragment() {
 // Call findCurrentPlace and handle the response (first check that the user has granted permission).
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED) {
-
+            Log.d("FirstFragment","in 94 if")
             val placeResponse = placesClient.findCurrentPlace(request)
             placeResponse.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -97,17 +99,18 @@ class FirstFragment : Fragment() {
                     for (placeLikelihood: PlaceLikelihood in response?.placeLikelihoods ?: emptyList()) {
                         Log.d(
                             "FirstFragment",
-                            "Place '${placeLikelihood.place.name}' has likelihood: ${placeLikelihood.likelihood}"
+                            "Place  name '${placeLikelihood.place.name}' has likelihood: ${placeLikelihood.likelihood} id ${placeLikelihood.place.id}"
                         )
                     }
                 } else {
                     val exception = task.exception
                     if (exception is ApiException) {
-                        Log.e("FirstFragment", "Place not found: ${exception.statusCode}")
+                        Log.d("FirstFragment", "Place not found: ${exception.statusCode}")
                     }
                 }
             }
         } else {
+            Log.d("FirstFragment","in 112 else")
             // A local method to request required permissions;
             // See https://developer.android.com/training/permissions/requesting
             //getLocationPermission()
@@ -123,6 +126,33 @@ class FirstFragment : Fragment() {
                 )
             )
         }
+
+    }
+
+    fun getPlaceByPlaceId(placeId : String){
+        // Define a Place ID.
+        //val placeId = "INSERT_PLACE_ID_HERE"
+        Log.d("FirstFragment", "getPlaceByPlaceId: ${placeId}")
+
+        // Specify the fields to return.
+        val placeFields = listOf(Place.Field.ID, Place.Field.NAME)
+
+        // Construct a request object, passing the place ID and fields array.
+        val request = FetchPlaceRequest.newInstance(placeId, placeFields)
+
+        placesClient.fetchPlace(request)
+            .addOnSuccessListener { response: FetchPlaceResponse ->
+                val place = response.place
+                Log.d("FirstFragment", "Place found: ${place.name}")
+            }.addOnFailureListener { exception: Exception ->
+                if (exception is ApiException) {
+                    Log.d("FirstFragment", "Place not found: ${exception.message}")
+                    val statusCode = exception.statusCode
+
+                    Log.d("FirstFragment", "statusCode: ${statusCode}")
+
+                }
+            }
 
     }
     override fun onDestroyView() {
